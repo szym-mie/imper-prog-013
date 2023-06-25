@@ -213,7 +213,8 @@ int cmp_int(data_union a, data_union b) {
 
 data_union create_int(void* value) {
 	data_union du;
-	du.int_data = *((int *)value);
+	int ival = value != NULL ? *((int *)value) : 0;
+	du.int_data = ival;
 	return du;
 }
 
@@ -233,7 +234,8 @@ int cmp_char(data_union a, data_union b) {
 
 data_union create_char(void* value) {
 	data_union du;
-	du.char_data = *((char *)value);
+	char cval = value != NULL ? *((char *)value) : 0;
+	du.char_data = cval;
 	return du;
 }
 
