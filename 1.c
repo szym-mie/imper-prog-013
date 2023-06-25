@@ -161,7 +161,7 @@ ht_element *get_element(hash_table *p_table, data_union *data) {
 // insert element
 void insert_element(hash_table *p_table, data_union *data) {
 	size_t h = p_table->hash_function(*data, p_table->size);
-	ht_element *new_elem = malloc(sizeof(ht_element *));
+	ht_element *new_elem = malloc(sizeof(ht_element));
 	if (new_elem == NULL)
 		return;
 	new_elem->data = *data;
