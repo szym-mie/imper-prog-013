@@ -80,8 +80,9 @@ void free_table(hash_table* p_table) {
 		ht_element *elem = *(p_table->ht+i);
 		while (elem != NULL)
 		{
+			ht_element *next_elem = elem->next;
 			free_element(p_table->free_data, elem);
-			elem = elem->next;
+			elem = next_elem;
 		}
 	}
 	free(p_table);
