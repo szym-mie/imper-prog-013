@@ -127,6 +127,9 @@ void rehash(hash_table *p_table) {
 	ht_element **lists = malloc(sizeof(ht_element *) * new_size);
 	if (lists == NULL)
 		return;
+	for (size_t i = 0; i < new_size; i++)
+		*(lists+i) = NULL;
+
 	for (size_t i = 0; i < p_table->size; i++)
 	{
 		ht_element *elem = *(p_table->ht+i);
@@ -168,6 +171,9 @@ ht_element *get_element(hash_table *p_table, data_union *data) {
 
 // insert element
 void insert_element(hash_table *p_table, data_union *data) {
+	if (get_element(p_table, data) != NULL)
+		return;
+
 	size_t h = p_table->hash_function(*data, p_table->size);
 	ht_element *new_elem = malloc(sizeof(ht_element));
 	if (new_elem == NULL)
@@ -175,6 +181,8 @@ void insert_element(hash_table *p_table, data_union *data) {
 	new_elem->data = *data;
 
 	add_to_ht_list(p_table->ht+h, new_elem);
+	if ((++p_table->no_elements) / p_table->size >= MAX_RATE)
+		rehash(p_table);
 }
 
 // remove element
@@ -189,6 +197,7 @@ void remove_element(hash_table *p_table, data_union data) {
 	{
 		*(p_table->ht+h) = elem;
 		free_element(p_table->free_data, prev_elem);
+		p_table->no_elements--;
 		return;
 	}
 
@@ -198,6 +207,7 @@ void remove_element(hash_table *p_table, data_union data) {
 		{
 			prev_elem->next = elem->next;
 			free_element(p_table->free_data, elem);
+			p_table->no_elements--;
 			return;
 		}
 		prev_elem = elem;
@@ -271,7 +281,6 @@ void free_word(data_union data) {
 	DataWord *dw = data.ptr_data;
 	if (dw == NULL)
 		return;
-	free(dw->word);
 	free(dw);
 }
 
@@ -340,13 +349,16 @@ void stream_to_ht(hash_table *p_table, FILE *stream) {
 				data_union dw = create_data_word(wbuf);	
 				ht_element *elem = get_element(p_table, &dw);
 				if (elem != NULL)
+				{
 					((DataWord *)elem->data.ptr_data)->counter++;
+					free_word(dw);
+				}
 				else
 					insert_element(p_table, &dw);
 				bufptr = buf;
 			}
 			if (c == EOF)
-				return;
+				break;
 		}
 		else
 		{
@@ -355,6 +367,7 @@ void stream_to_ht(hash_table *p_table, FILE *stream) {
 			bufptr++;
 		}
 	}
+	free(buf);
 }
 
 // test primitive type list
