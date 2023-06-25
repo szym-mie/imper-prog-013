@@ -70,7 +70,9 @@ void dump_list(const hash_table* p_table, size_t n) {
 
 // Free element pointed by data_union using free_data() function
 void free_element(DataFp free_data, ht_element *to_delete) {
-	free_data(to_delete->data);
+	if (free_data != NULL)
+		free_data(to_delete->data);
+	free(to_delete);
 }
 
 // free all elements from the table (and the table itself)
@@ -85,7 +87,7 @@ void free_table(hash_table* p_table) {
 			elem = next_elem;
 		}
 	}
-	free(p_table);
+	free(p_table->ht);
 }
 
 // calculate hash function for integer k
@@ -174,8 +176,13 @@ void insert_element(hash_table *p_table, data_union *data) {
 void remove_element(hash_table *p_table, data_union data) {
 	size_t h = p_table->hash_function(data, p_table->size);
 	ht_element *prev_elem = *(p_table->ht+h);
+	if (prev_elem == NULL) 
+		return;
 	ht_element *elem = prev_elem->next;
 
+	puts("fuck you");
+	printf("prev_elem %p elem %p\n", prev_elem, elem);
+	
 	if (p_table->compare_data(prev_elem->data, data) == 0)
 	{
 		*(p_table->ht+h) = elem;
