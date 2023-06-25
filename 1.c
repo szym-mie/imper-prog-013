@@ -97,17 +97,19 @@ size_t hash_base(int k, size_t size) {
 	return (size_t)floor((double)size * (tmp - floor(tmp)));
 }
 
-void add_to_ht_list(ht_element **list, ht_element *new_elem, CompareDataFp cmp_fn) {
+void add_to_ht_list(ht_element **list, ht_element *new_elem) {
+/*
 	ht_element *elem = *list;
-	if (elem == NULL)
+	if (elem == NULL || cmp_fn(elem->data, new_elem->data) > 0)
 	{
-		new_elem->next = NULL;
-		*list = new_elem; 
+		new_elem->next = elem;
+		*list = new_elem;
+		return;
 	}
 
 	while (elem != NULL)
 	{
-		if (cmp_fn(elem->data, new_elem->data) > 0 || elem->next == NULL)
+		if (elem->next == NULL || cmp_fn(elem->next->data, new_elem->data) > 0)
 		{
 			new_elem->next = elem->next;
 			elem->next = new_elem;
@@ -115,6 +117,9 @@ void add_to_ht_list(ht_element **list, ht_element *new_elem, CompareDataFp cmp_f
 		}
 		elem = elem->next;
 	}
+*/
+	new_elem->next = *list;
+	*list = new_elem;
 }
 
 void rehash(hash_table *p_table) {
@@ -131,7 +136,7 @@ void rehash(hash_table *p_table) {
 			// it's next after addition to new list
 			ht_element *next_elem = elem->next;
 			size_t nh = p_table->hash_function(elem->data, new_size);
-			add_to_ht_list(lists+nh, elem, p_table->compare_data);
+			add_to_ht_list(lists+nh, elem);
 			elem = next_elem;
 		}
 	}
@@ -169,7 +174,7 @@ void insert_element(hash_table *p_table, data_union *data) {
 		return;
 	new_elem->data = *data;
 
-	add_to_ht_list(p_table->ht+h, new_elem, p_table->compare_data);
+	add_to_ht_list(p_table->ht+h, new_elem);
 }
 
 // remove element
@@ -180,9 +185,6 @@ void remove_element(hash_table *p_table, data_union data) {
 		return;
 	ht_element *elem = prev_elem->next;
 
-	puts("fuck you");
-	printf("prev_elem %p elem %p\n", prev_elem, elem);
-	
 	if (p_table->compare_data(prev_elem->data, data) == 0)
 	{
 		*(p_table->ht+h) = elem;
@@ -212,7 +214,7 @@ size_t hash_int(data_union data, size_t size) {
 }
 
 void dump_int(data_union data) {
-	printf("%d\n", data.int_data);
+	printf("%d ", data.int_data);
 }
 
 int cmp_int(data_union a, data_union b) {
@@ -235,7 +237,7 @@ size_t hash_char(data_union data, size_t size) {
 }
 
 void dump_char(data_union data) {
-	putchar(data.char_data);
+	printf("%c ", data.char_data);
 }
 
 int cmp_char(data_union a, data_union b) {
@@ -245,7 +247,7 @@ int cmp_char(data_union a, data_union b) {
 data_union create_char(void* value) {
 	data_union du;
 	if (value == NULL)
-		scanf("%c", &du.char_data);
+		scanf(" %c", &du.char_data);
 	else
 		du.char_data = *((char *)value);
 	return du;
@@ -301,7 +303,7 @@ void modify_word(data_union *data) {
 }
 
 data_union create_data_word(void *value) {
-	data_union du;
+	data_union du;   
 	DataWord *dw = malloc(sizeof(DataWord));
 	du.ptr_data = dw;
 	if (dw == NULL) return du;
@@ -322,34 +324,36 @@ void stream_to_ht(hash_table *p_table, FILE *stream) {
 
 	for (;;)
 	{
-		c = getchar();
-		int is_wspace = c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == EOF;
-		if (is_wspace && is_break) 
-			continue;
-
-		if (is_wspace && !is_break)
+		c = fgetc(stream);
+		if (c == ' ' || c == ';' || c == '\t' || c == '\r' || c == '\n' || c == EOF)
 		{
-			is_break = 1;
-			*bufptr = '\0';
-			size_t buflen = strnlen(buf, BUFFER_SIZE) + 1;
-			char *wbuf = malloc(buflen);
-			if (wbuf == NULL)
+			if (!is_break)
+			{
+				is_break = 1;
+				*bufptr = '\0';
+				size_t buflen = strnlen(buf, BUFFER_SIZE) + 1;
+				char *wbuf = malloc(buflen);
+				if (wbuf == NULL)
+					return;
+				memcpy(wbuf, buf, buflen);
+				// add to the table
+				data_union dw = create_data_word(wbuf);	
+				ht_element *elem = get_element(p_table, &dw);
+				if (elem != NULL)
+					((DataWord *)elem->data.ptr_data)->counter++;
+				else
+					insert_element(p_table, &dw);
+				bufptr = buf;
+			}
+			if (c == EOF)
 				return;
-			memcpy(wbuf, buf, buflen);
-			// add to the table
-			data_union dw = create_data_word(wbuf);	
-			insert_element(p_table, &dw);
-			bufptr = buf;
 		}
 		else
 		{
 			is_break = 0;
-			*bufptr = c;
+			*bufptr = tolower(c);
 			bufptr++;
 		}
-
-		if (c == EOF)
-			break;
 	}
 }
 
